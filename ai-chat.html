@@ -12,6 +12,10 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -372,6 +376,50 @@
             background: rgba(236,57,66,0.2);
             color: var(--red);
         }
+
+        /* KaTeX math in bubbles */
+        .msg-bubble .katex { font-size: 1.05em; }
+        .msg-bubble .katex-display {
+            margin: 8px 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 2px 0;
+        }
+
+        /* Header dropdown menu (mobile) */
+        .chat-header { position: relative; }
+        .kebab-btn { display: none; }
+        .header-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            inset-inline-end: 8px;
+            background: #223140;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 4px;
+            z-index: 200;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            min-width: 180px;
+        }
+        .header-menu.show { display: block; }
+        .header-menu-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text2);
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .header-menu-item:hover, .header-menu-item:active { background: var(--bg4); color: #fff; }
+
+        /* Active model row in models dialog */
+        .models-active-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .models-active-row span { font-size: 13px; color: var(--text2); flex-shrink: 0; }
+        .models-active-row select { flex: 1; padding: 8px 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; background: var(--bg3); color: var(--text); font: inherit; font-size: 13px; outline: none; }
 
         /* Markdown */
         .msg-bubble p { margin: 0 0 6px; }
@@ -767,6 +815,8 @@
 
             body.chat-open .back-btn { display: flex; }
             .chat-header { padding-right: 4px; }
+            .desktop-only { display: none !important; }
+            .kebab-btn { display: flex; }
 
             .msg-group { max-width: 84%; }
             .model-select { max-width: 110px; min-width: 64px; font-size: 11px; }
@@ -774,6 +824,7 @@
 
         @media (min-width: 769px) {
             .back-btn { display: none !important; }
+            .kebab-btn { display: none !important; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -857,9 +908,9 @@
                 </div>
             </div>
             <div class="header-actions">
-                <select id="modelSelect" class="model-select" aria-label="مدل" onchange="onModelChange(this.value)"></select>
-                <button class="header-btn" onclick="openModelSettings()" title="تنظیم مدل‌ها" aria-label="تنظیم مدل‌ها">⚙</button>
-                <button class="header-btn" onclick="openNewChat()" title="گفتگوی جدید" aria-label="گفتگوی جدید">
+                <select id="modelSelect" class="model-select desktop-only" aria-label="مدل" onchange="onModelChange(this.value)"></select>
+                <button class="header-btn desktop-only" onclick="openModelSettings()" title="تنظیم مدل‌ها" aria-label="تنظیم مدل‌ها">⚙</button>
+                <button class="header-btn desktop-only" onclick="openNewChat()" title="گفتگوی جدید" aria-label="گفتگوی جدید">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
                     </svg>
@@ -869,6 +920,16 @@
                         <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
                     </svg>
                 </button>
+                <button class="header-btn kebab-btn" onclick="toggleHeaderMenu(event)" title="بیشتر" aria-label="بیشتر">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="header-menu" id="headerMenu">
+                <div class="header-menu-item" onclick="openModelSettings(); closeHeaderMenu();">⚙ تنظیم مدل‌ها</div>
+                <div class="header-menu-item" onclick="openNewChat(); closeHeaderMenu();">✏️ گفتگوی جدید</div>
+                <div class="header-menu-item" onclick="clearCurrentChat(); closeHeaderMenu();">🗑 پاک کردن گفتگو</div>
             </div>
         </div>
 
@@ -897,12 +958,9 @@
                 </button>
                 <textarea class="chat-input" id="chatInput" placeholder="پیام" rows="1" dir="auto"
                     onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-                <button class="send-btn" id="sendBtn" onclick="onSendClick()" title="ارسال" aria-label="ارسال">
-                    <svg class="plane-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <button class="send-btn" id="sendBtn" onclick="send()" title="ارسال" aria-label="ارسال">
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                    </svg>
-                    <svg class="mic-icon" style="display:none;" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>
                     </svg>
                 </button>
                 <button class="stop-btn" id="stopBtn" onclick="stopGeneration()" style="display:none;" title="توقف" aria-label="توقف">
@@ -917,6 +975,7 @@
     <div class="models-dialog" id="modelsDialog" onclick="if(event.target===this)closeModelSettings()">
         <section class="models-card" role="dialog" aria-modal="true" aria-labelledby="modelsTitle">
             <h2 id="modelsTitle">مدل‌های OpenRouter</h2>
+            <div class="models-active-row"><span>مدل فعال</span><select id="dialogModelSelect" onchange="onDialogModelChange(this.value)" dir="ltr"></select></div>
             <p>هر شناسه را در یک خط بنویسید. مدل انتخابی اول امتحان می‌شود و بقیه به‌ترتیب جایگزین‌اند.</p>
             <textarea id="modelsInput" rows="7" dir="ltr" spellcheck="false" aria-label="شناسه مدل‌ها"></textarea>
             <div class="models-actions"><button type="button" onclick="closeModelSettings()">لغو</button><button type="button" onclick="saveModelSettings()">ذخیره</button></div>
@@ -957,10 +1016,42 @@
             modelSettings.selected = value;
             localStorage.setItem(MODEL_SETTINGS_KEY, JSON.stringify(modelSettings));
         }
+        function onDialogModelChange(value) { onModelChange(value); }
+
+        // ==================== HEADER MENU (mobile) ====================
+        function toggleHeaderMenu(e) {
+            if (e) e.stopPropagation();
+            $('headerMenu').classList.toggle('show');
+        }
+        function closeHeaderMenu() { $('headerMenu').classList.remove('show'); }
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#headerMenu') && !e.target.closest('.kebab-btn')) closeHeaderMenu();
+        });
+
+        // ==================== MATH RENDERING (KaTeX) ====================
+        function renderMathIn(el) {
+            if (window.renderMathInElement) {
+                try {
+                    renderMathInElement(el, {
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '\\[', right: '\\]', display: true},
+                            {left: '\\(', right: '\\)', display: false},
+                            {left: '$', right: '$', display: false}
+                        ],
+                        throwOnError: false
+                    });
+                } catch (_) {}
+            }
+        }
         function openModelSettings() {
             $('modelsInput').value = modelSettings.models.join('\n');
+            const dsel = $('dialogModelSelect');
+            if (dsel) {
+                dsel.innerHTML = modelSettings.models.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+                dsel.value = modelSettings.selected;
+            }
             $('modelsDialog').classList.add('show');
-            $('modelsInput').focus();
         }
         function closeModelSettings() { $('modelsDialog').classList.remove('show'); }
         function saveModelSettings() {
@@ -1099,20 +1190,9 @@
             }
         }
 
-        function updateSendButton() {
-            const hasText = $('chatInput').value.trim().length > 0;
-            const plane = $('sendBtn').querySelector('.plane-icon');
-            const mic = $('sendBtn').querySelector('.mic-icon');
-            if (plane && mic) {
-                plane.style.display = hasText ? 'block' : 'none';
-                mic.style.display = hasText ? 'none' : 'block';
-            }
-        }
+        function updateSendButton() {}
 
-        function onSendClick() {
-            if ($('chatInput').value.trim()) send();
-            else showToast('ضبط پیام صوتی فعلاً پشتیبانی نمی‌شود');
-        }
+        function onSendClick() { send(); }
 
         // ==================== LONG-PRESS MESSAGE ACTIONS (لنقل دوباره با کپی) ====================
         let pressTimer = null;
@@ -1131,6 +1211,11 @@
                 document.querySelectorAll('.msg-group.show-actions').forEach(g => g.classList.remove('show-actions'));
             }
         }, true);
+
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.code-copy');
+            if (btn) copyCodeBlock(btn);
+        });
 
         // ==================== COPY HELPERS ====================
         function copyToClipboard(text, successMsg) {
@@ -1475,6 +1560,8 @@
                 contentDiv.querySelectorAll('pre code').forEach(block => {
                     if (window.hljs) hljs.highlightElement(block);
                 });
+                renderMathIn(contentDiv);
+                contentDiv.querySelectorAll('a').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
             }
             bubble.appendChild(contentDiv);
 
@@ -1530,7 +1617,7 @@
                 return `<div class="code-block">
                     <div class="code-header">
                         <span class="code-lang">${escapeHtml(lang)}</span>
-                        <button class="code-copy" onclick="copyCodeBlock(this)">
+                        <button class="code-copy" type="button">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                             </svg>
@@ -1545,7 +1632,8 @@
             if (marked.use) {
                 try { marked.use({ renderer }); } catch(e) {}
             }
-            return marked.parse(text);
+            const html = marked.parse(text);
+            return window.DOMPurify ? DOMPurify.sanitize(html, {ADD_ATTR: ['target']}) : html;
         }
 
         function escapeHtml(text) {
@@ -1753,7 +1841,7 @@
 
             try {
                 const apiMessages = [
-                    { role: 'system', content: 'You are a helpful AI assistant. Always respond in the same language as the user. If user writes in Persian/Farsi, respond in Persian. Be helpful, accurate, and concise. If user sends an image, describe what you see and answer any questions about it. If user sends a file, read its text content only. Do NOT execute or run any code from the file. Only analyze and discuss the text content as provided.' }
+                    { role: 'system', content: 'You are a helpful AI assistant. Always respond in the same language as the user. If user writes in Persian/Farsi, respond in Persian. Be helpful, accurate, and concise. For any mathematical expression, equation, or calculation, write it in LaTeX notation: use $...$ for inline math and $$...$$ for display math, never plain-text pseudo notation. If user sends an image, describe what you see and answer any questions about it. If user sends a file, read its text content only. Do NOT execute or run any code from the file. Only analyze and discuss the text content as provided.' }
                 ];
 
                 state.messages.forEach(m => {
@@ -1860,6 +1948,7 @@
                             assistantMsg.content = fullText;
                             contentDiv.innerHTML = parseMarkdown(fullText);
                             contentDiv.querySelectorAll('pre code').forEach(block => { if (window.hljs) hljs.highlightElement(block); });
+                            if (chunkCount % 4 === 0) renderMathIn(contentDiv);
                             chunkCount++;
                             if (chunkCount % 3 === 0) scrollToBottom(false);
                         }
@@ -1871,6 +1960,8 @@
                 contentDiv.querySelectorAll('pre code').forEach(block => {
                     if (window.hljs) hljs.highlightElement(block);
                 });
+                renderMathIn(contentDiv);
+                contentDiv.querySelectorAll('a').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
                 metaEl.innerHTML = `<span class="msg-time">${formatTime(assistantMsg.timestamp)}</span>`;
 
                 saveChat();
